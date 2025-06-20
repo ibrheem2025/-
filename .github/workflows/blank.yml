@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>دفتر الملاحظات الهجري المتقدم</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; }
+
+    .container {
+      max-width: 800px; margin: 0 auto; padding: 20px;
+    }
+
+    h2 { text-align: center; margin-bottom: 20px; color: #2c3e50; }
+
+    .search-container {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 20px;
+      border: 1px solid #ddd;
+      border-radius: 25px;
+      font-size: 16px;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+
+    .note {
+      background: #fff; border: 1px solid #ddd; margin-bottom: 15px;
+      padding: 15px; border-right: 4px solid #4CAF50; cursor: pointer;
+      border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .note.selected {
+      background-color: #e8f5e9;
+      border-right: 4px solid #2196F3;
+      transform: translateX(-5px);
+    }
+
+    .note-checkbox {
+      position: absolute; left: 10px; top: 10px;
+      width: 18px; height: 18px;
+      cursor: pointer;
+    }
+
+    .note:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .note-content {
+      margin-bottom: 10px; line-height: 1.6;
+      white-space: pre-wrap; margin-right: 25px;
+      word-break: break-word;
+    }
+
+    .note-date {
+      font-size: 13px; color: #7f8c8d; text-align: left;
+      direction: ltr; margin-right: 25px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .floating-btn {
+      position: fixed; bottom: 25px; left: 25px;
+      width: 60px; height: 60px; border-radius: 50%;
+      background-color: #4CAF50; color: white; font-size: 30px;
+      text-align: center; border: none; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .floating-btn:hover {
+      transform: scale(1.1) rotate(90deg);
+      background-color: #3e8e41;
+    }
+
+    .action-buttons {
+      position: fixed; bottom: 25px; right: 25px;
+      display: flex; gap: 10px; z-index: 100;
+      transition: all 0.3s ease;
+    }
+
+    .action-btn {
+      width: 60px; height: 60px; border-radius: 50%;
+      background-color: #2196F3; color: white; font-size: 20px;
+      text-align: center; border: none; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn.delete-btn {
+      background-color: #f44336;
+    }
+
+    .action-btn.export-btn {
+      background-color: #FF9800;
+    }
+
+    .action-btn:hover {
+      transform: scale(1.1);
+    }
+
+    /* شاشة عرض الملاحظة */
+    .view-screen {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh; background: white;
+      z-index: 999; flex-direction: column;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .view-header {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 15px; background: #f9f9f9;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .view-content {
+      flex: 1; padding: 25px; overflow-y: auto;
+      font-size: 18px; line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .view-date {
+      font-size: 14px; color: #666;
+      direction: ltr;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .view-options {
+      position: absolute; top: 60px; left: 15px;
+      background: #fff; border: 1px solid #ccc;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      padding: 5px 0; border-radius: 5px; display: none;
+      z-index: 1000; min-width: 180px;
+      animation: slideDown 0.2s ease;
+    }
+
+    .view-options button {
+      background: none; border: none; width: 100%;
+      padding: 12px 20px; text-align: right; font-size: 15px;
+      cursor: pointer; display: flex; align-items: center;
+      gap: 10px;
+      transition: background-color 0.2s;
+    }
+
+    .view-options button:hover {
+      background: #f5f5f5;
+    }
+
+    /* شاشة التحرير */
+    .editor-screen {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh; background: white;
+      z-index: 1000; flex-direction: column;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .editor-header {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 15px; background: #f9f9f9;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .options-button {
+      font-size: 24px; background: none; border: none; cursor: pointer;
+      transform: rotate(90deg); width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: all 0.3s ease;
+    }
+
+    .options-button:hover {
+      background-color: #eee;
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    .editor-menu {
+      position: absolute; top: 60px; left: 15px;
+      background: #fff; border: 1px solid #ccc;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      padding: 5px 0; border-radius: 5px; display: none;
+      z-index: 1001; min-width: 200px;
+      animation: slideDown 0.2s ease;
+    }
+
+    .editor-menu button {
+      background: none; border: none; width: 100%;
+      padding: 12px 20px; text-align: right; font-size: 15px;
+      cursor: pointer; display: flex; align-items: center;
+      gap: 10px;
+      transition: background-color 0.2s;
+    }
+
+    .editor-menu button:hover {
+      background: #f5f5f5;
+    }
+
+    textarea {
+      flex: 1; padding: 25px; font-size: 18px;
+      border: none; outline: none; resize: none;
+      line-height: 1.8; font-family: 'Segoe UI', Tahoma, sans-serif;
+      background-color: #fff;
+    }
+
+    /* شاشة التأكيد */
+    .confirm-dialog {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh; background: rgba(0,0,0,0.5);
+      z-index: 1002; justify-content: center; align-items: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .confirm-box {
+      background: white; padding: 25px; border-radius: 8px;
+      width: 90%; max-width: 400px; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      animation: slideUp 0.3s ease;
+    }
+
+    .confirm-message {
+      margin-bottom: 25px; font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .confirm-buttons {
+      display: flex; justify-content: space-around;
+      margin-top: 20px; gap: 10px;
+    }
+
+    .confirm-buttons button {
+      padding: 10px 20px; border: none; border-radius: 6px;
+      cursor: pointer; font-weight: bold; flex: 1;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .confirm-buttons button:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .confirm-save {
+      background: #4CAF50; color: white;
+    }
+
+    .confirm-discard {
+      background: #f44336; color: white;
+    }
+
+    .confirm-cancel {
+      background: #9E9E9E; color: white;
+    }
+
+    .confirm-delete {
+      background: #d32f2f; color: white;
+    }
+
+    .empty-notes {
+      text-align: center; color: #7f8c8d;
+      margin-top: 50px; font-size: 18px;
+      padding: 20px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 15px; }
+      .note { padding: 12px; }
+      .view-content, textarea { padding: 20px; font-size: 16px; }
+      .confirm-box { width: 95%; padding: 20px; }
+      .action-buttons { bottom: 90px; right: 15px; }
+      .floating-btn { left: 15px; bottom: 20px; }
+      
+      .view-options, .editor-menu {
+        left: 10px;
+        right: 10px;
+        min-width: auto;
+        width: calc(100% - 20px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="mainScreen">
+    <h2>📓 دفتر الملاحظات الهجري المتقدم</h2>
+    
+    <div class="search-container">
+      <input type="text" class="search-input" id="searchInput" placeholder="ابحث في الملاحظات...">
+    </div>
+    
+    <div id="notes"></div>
+  </div>
+
+  <button class="floating-btn" id="addNoteBtn" onclick="openEditor()">+</button>
+  
+  <div class="action-buttons">
+    <button class="action-btn delete-btn" onclick="deleteSelectedNotes()">🗑️</button>
+    <button class="action-btn export-btn" onclick="exportSelectedNotes()">💾</button>
+  </div>
+
+  <!-- شاشة عرض الملاحظة -->
+  <div class="view-screen" id="viewScreen">
+    <div class="view-header">
+      <span class="view-date" id="viewDate"></span>
+      <button class="options-button" onclick="toggleViewOptions()">⋮</button>
+    </div>
+    <div class="view-content" id="viewContent"></div>
+    <div class="view-options" id="viewOptions"></div>
+  </div>
+
+  <!-- شاشة التحرير -->
+  <div class="editor-screen" id="editorScreen">
+    <div class="editor-header">
+      <span id="editorTitle">ملاحظة جديدة</span>
+      <button class="options-button" onclick="toggleEditorMenu()">⋮</button>
+    </div>
+    <textarea id="editorArea" placeholder="اكتب ملاحظتك هنا..."></textarea>
+    <div class="editor-menu" id="editorMenu"></div>
+  </div>
+
+  <!-- شاشة تأكيد الحفظ -->
+  <div class="confirm-dialog" id="saveConfirmDialog">
+    <div class="confirm-box">
+      <p class="confirm-message">هل تريد حفظ التغييرات قبل الخروج؟</p>
+      <div class="confirm-buttons">
+        <button class="confirm-save" onclick="confirmSave()">💾 حفظ</button>
+        <button class="confirm-discard" onclick="confirmDiscard()">❌ تجاهل</button>
+        <button class="confirm-cancel" onclick="cancelExit()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- شاشة تأكيد الحذف -->
+  <div class="confirm-dialog" id="deleteConfirmDialog">
+    <div class="confirm-box">
+      <p class="confirm-message" id="deleteConfirmMessage">هل أنت متأكد من حذف الملاحظات المحددة؟</p>
+      <div class="confirm-buttons">
+        <button class="confirm-delete" onclick="confirmDeleteSelected()">🗑️ حذف</button>
+        <button class="confirm-cancel" onclick="cancelDelete()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let notes = [];
+    let currentViewIndex = null;
+    let editingIndex = null;
+    let originalContent = "";
+    let selectedNotes = [];
+    let filteredNotes = [];
+
+    // حالات التطبيق
+    const APP_STATES = {
+      MAIN: 'main',
+      VIEW: 'view',
+      EDIT: 'edit'
+    };
+    let currentState = APP_STATES.MAIN;
+
+    // تهيئة التطبيق عند التحميل
+    document.addEventListener("DOMContentLoaded", function() {
+      loadNotes();
+      updateHistory();
+      setupPasteHandler();
+      setupBackButtonHandler();
+      setupSearchHandler();
+    });
+
+    function setupPasteHandler() {
+      document.getElementById("editorArea").addEventListener("paste", function(e) {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+        const startPos = this.selectionStart;
+        const endPos = this.selectionEnd;
+        this.value = this.value.substring(0, startPos) + text + this.value.substring(endPos);
+        this.selectionStart = this.selectionEnd = startPos + text.length;
+      });
+    }
+
+    function setupBackButtonHandler() {
+      window.addEventListener('popstate', function(event) {
+        if (event.state) {
+          handleBackButton();
+        }
+      });
+    }
+
+    function setupSearchHandler() {
+      const searchInput = document.getElementById("searchInput");
+      searchInput.addEventListener('input', function() {
+        filterNotes(this.value.trim());
+      });
+    }
+
+    function filterNotes(searchTerm) {
+      if (!searchTerm) {
+        filteredNotes = [...notes];
+        renderNotes();
+        return;
+      }
+      
+      const term = searchTerm.toLowerCase();
+      filteredNotes = notes.filter(note => 
+        note.text.toLowerCase().includes(term) || 
+        note.hijriDate.toLowerCase().includes(term)
+      );
+      
+      renderNotes();
+    }
+
+    function loadNotes() {
+      try {
+        const saved = localStorage.getItem("advanced-notes");
+        notes = saved ? JSON.parse(saved) : [];
+        if (!Array.isArray(notes)) notes = [];
+        
+        // Sort notes by date (newest first)
+        notes.sort((a, b) => new Date(b.gregorianDate) - new Date(a.gregorianDate));
+      } catch (e) { 
+        console.error("Error loading notes:", e);
+        notes = []; 
+      }
+      
+      filteredNotes = [...notes];
+      renderNotes();
+    }
+
+    function renderNotes() {
+      const container = document.getElementById("notes");
+      container.innerHTML = "";
+      selectedNotes = [];
+      toggleActionButtons();
+      
+      if (filteredNotes.length === 0) {
+        const emptyMessage = notes.length === 0 ? 
+          'لا توجد ملاحظات متاحة' : 
+          'لا توجد ملاحظات تطابق البحث';
+        container.innerHTML = `<div class="empty-notes">${emptyMessage}</div>`;
+        return;
+      }
+
+      filteredNotes.forEach((note, index) => {
+        const originalIndex = notes.findIndex(n => n.gregorianDate === note.gregorianDate);
+        const noteDiv = document.createElement("div");
+        noteDiv.className = "note";
+        noteDiv.id = `note-${originalIndex}`;
+        
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "note-checkbox";
+        checkbox.onclick = (e) => {
+          e.stopPropagation();
+          toggleNoteSelection(originalIndex, checkbox.checked);
+        };
+        
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "note-content";
+        contentDiv.textContent = note.text.length > 200 ? note.text.slice(0, 200) + "..." : note.text;
+        
+        const dateDiv = document.createElement("div");
+        dateDiv.className = "note-date";
+        
+        const hijriDateSpan = document.createElement("span");
+        hijriDateSpan.textContent = formatHijriDate(note.hijriDate);
+        
+        dateDiv.appendChild(hijriDateSpan);
+        
+        noteDiv.appendChild(checkbox);
+        noteDiv.appendChild(contentDiv);
+        noteDiv.appendChild(dateDiv);
+        noteDiv.onclick = (e) => {
+          if (e.target.type !== 'checkbox') {
+            viewNote(originalIndex);
+          }
+        };
+        
+        container.appendChild(noteDiv);
+      });
+    }
+
+    function formatHijriDate(hijriDate) {
+      // تحسين عرض التاريخ الهجري
+      const parts = hijriDate.split('،');
+      if (parts.length > 1) {
+        return `📅 ${parts[0].trim()} | 🕒 ${parts[1].trim()}`;
+      }
+      return `📅 ${hijriDate}`;
+    }
+
+    function toggleNoteSelection(index, isSelected) {
+      const noteElement = document.getElementById(`note-${index}`);
+      if (isSelected) {
+        if (!selectedNotes.includes(index)) {
+          selectedNotes.push(index);
+        }
+        noteElement.classList.add("selected");
+      } else {
+        selectedNotes = selectedNotes.filter(i => i !== index);
+        noteElement.classList.remove("selected");
+      }
+      toggleActionButtons();
+    }
+
+    function toggleActionButtons() {
+      const deleteBtn = document.querySelector(".delete-btn");
+      const exportBtn = document.querySelector(".export-btn");
+      
+      if (selectedNotes.length > 0) {
+        deleteBtn.style.display = "flex";
+        exportBtn.style.display = "flex";
+        
+        // Update delete confirmation message
+        const msg = selectedNotes.length === 1 ? 
+          "هل أنت متأكد من حذف الملاحظة المحددة؟" : 
+          `هل أنت متأكد من حذف ${selectedNotes.length} ملاحظات؟`;
+        document.getElementById("deleteConfirmMessage").textContent = msg;
+      } else {
+        deleteBtn.style.display = "none";
+        exportBtn.style.display = "none";
+      }
+    }
+
+    function viewNote(index) {
+      currentViewIndex = index;
+      const note = notes[index];
+      document.getElementById("viewContent").textContent = note.text;
+      
+      // عرض التاريخ الهجري والميلادي
+      const gregorianDate = new Date(note.gregorianDate).toLocaleString('ar-EG', {
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      document.getElementById("viewDate").innerHTML = `
+        <span>📅 ${note.hijriDate}</span>
+        <span style="margin: 0 10px;">|</span>
+        <span>📅 ${gregorianDate}</span>
+      `;
+      
+      setupViewOptions(index);
+      showScreen("viewScreen");
+      currentState = APP_STATES.VIEW;
+      updateHistory();
+    }
+
+    function setupViewOptions(index) {
+      const viewOptions = document.getElementById("viewOptions");
+      viewOptions.innerHTML = "";
+      
+      const editBtn = createOptionButton("✏️ تعديل", () => editNote(index));
+      const shareBtn = createOptionButton("📤 مشاركة", () => shareNoteFromList(index));
+      const downloadBtn = createOptionButton("💾 حفظ كملف", () => downloadNoteFromList(index));
+      const deleteBtn = createOptionButton("🗑️ حذف", () => showDeleteConfirmation(index));
+      
+      viewOptions.append(editBtn, shareBtn, downloadBtn, deleteBtn);
+    }
+
+    function createOptionButton(label, action) {
+      const btn = document.createElement("button");
+      btn.innerHTML = `<span>${label}</span>`;
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        action();
+        closeViewOptions();
+      };
+      return btn;
+    }
+
+    function editNote(index) {
+      editingIndex = index;
+      const note = notes[index];
+      originalContent = note.text;
+      document.getElementById("editorArea").value = note.text;
+      document.getElementById("editorTitle").textContent = "تعديل الملاحظة";
+      
+      setupEditorMenu(true);
+      showScreen("editorScreen");
+      currentState = APP_STATES.EDIT;
+      closeViewOptions();
+      updateHistory();
+      
+      // Focus the editor and move cursor to end
+      setTimeout(() => {
+        const editor = document.getElementById("editorArea");
+        editor.focus();
+        editor.selectionStart = editor.selectionEnd = editor.value.length;
+      }, 100);
+    }
+
+    function showDeleteConfirmation(index) {
+      selectedNotes = [index]; // Set the current note as selected
+      toggleActionButtons(); // Update action buttons
+      document.getElementById("deleteConfirmDialog").style.display = "flex";
+      closeViewOptions();
+    }
+
+    function deleteSelectedNotes() {
+      if (selectedNotes.length > 0) {
+        document.getElementById("deleteConfirmDialog").style.display = "flex";
+      }
+    }
+
+    function confirmDeleteSelected() {
+      if (selectedNotes.length > 0) {
+        // حذف الملاحظات المحددة (من الأكبر إلى الأصغر لتجنب مشاكل المؤشرات)
+        selectedNotes.sort((a, b) => b - a).forEach(index => {
+          notes.splice(index, 1);
+        });
+        
+        try {
+          localStorage.setItem("advanced-notes", JSON.stringify(notes));
+          document.getElementById("deleteConfirmDialog").style.display = "none";
+          
+          // Return to main screen if we're in view mode
+          if (currentState === APP_STATES.VIEW) {
+            showScreen("mainScreen");
+            currentState = APP_STATES.MAIN;
+          }
+          
+          loadNotes();
+          updateHistory();
+        } catch (e) {
+        
+        console.error("Error downloading note:", e);
+        alert("حدث خطأ أثناء تحميل الملاحظة");
+      }
+    }
+
+    function closeEditor() {
+      const currentContent = document.getElementById("editorArea").value.trim();
+      
+      if (currentContent && currentContent !== originalContent) {
+        document.getElementById("saveConfirmDialog").style.display = "flex";
+      } else {
+        returnToPreviousScreen();
+      }
+      
+      closeEditorMenu();
+    }
+
+    function confirmSave() {
+      document.getElementById("saveConfirmDialog").style.display = "none";
+      saveNote();
+    }
+
+    function confirmDiscard() {
+      document.getElementById("saveConfirmDialog").style.display = "none";
+      returnToPreviousScreen();
+    }
+
+    function returnToPreviousScreen() {
+      if (editingIndex !== null) {
+        viewNote(editingIndex);
+      } else {
+        showScreen("mainScreen");
+        currentState = APP_STATES.MAIN;
+        updateHistory();
+      }
+    }
+
+    function cancelExit() {
+      document.getElementById("saveConfirmDialog").style.display = "none";
+    }
+
+    function updateHistory() {
+      history.pushState({ 
+        state: currentState,
+        noteIndex: currentViewIndex ?? editingIndex
+      }, '');
+    }
+
+    function handleBackButton() {
+      switch (currentState) {
+        case APP_STATES.EDIT:
+          closeEditor();
+          break;
+          
+        case APP_STATES.VIEW:
+          showScreen("mainScreen");
+          currentState = APP_STATES.MAIN;
+          updateHistory();
+          break;
+      }
+    }
+
+    // إدارة أحداث النقر خارج القوائم
+    document.addEventListener("click", (e) => {
+      // إغلاق قائمة عرض الملاحظة
+      const viewOptions = document.getElementById("viewOptions");
+      const viewOptionsBtn = document.querySelector("#viewScreen .options-button");
+      if (viewOptions.style.display === "block" && 
+          !viewOptions.contains(e.target) && 
+          (!viewOptionsBtn || !viewOptionsBtn.contains(e.target))) {
+        closeViewOptions();
+      }
+      
+      // إغلاق قائمة التحرير
+      const editorMenu = document.getElementById("editorMenu");
+      const editorMenuBtn = document.querySelector("#editorScreen .options-button");
+      if (editorMenu.style.display === "block" && 
+          !editorMenu.contains(e.target) && 
+          (!editorMenuBtn || !editorMenuBtn.contains(e.target))) {
+        closeEditorMenu();
+      }
+    });
+  </script>
+</body>
+</html>
